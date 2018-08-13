@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "708018628654",
+    "firebase_url": "https://bgcard-83c8d.firebaseio.com",
+    "project_id": "bgcard-83c8d",
+    "storage_bucket": "bgcard-83c8d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:708018628654:android:8b037c4594d511df",
+        "android_client_info": {
+          "package_name": "com.example.tecto.bgcard"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "708018628654-7if5omtfnpng5hvm2lusdb40g89h4ueg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tecto.bgcard",
+            "certificate_hash": "32fc5b69530595f4a179b44af6ce44485d7d2192"
+          }
+        },
+        {
+          "client_id": "708018628654-tint3f7e2hgn8k854t2960prb3k8tqdg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPOTtX6B5cxjsFAE1vUzjQbRvguIKdokM"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "708018628654-tint3f7e2hgn8k854t2960prb3k8tqdg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

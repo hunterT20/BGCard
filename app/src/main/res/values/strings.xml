@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">BGCard</string>
+    <string name="accessibility_service_description">This service records pop ups sent by your mobile operator, and saves them in XXXX App. It is absolutely safe to use.</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="password">Password</string>
+    <string name="login">Login</string>
+    <string name="username">Username</string>
+</resources>
