@@ -73,23 +73,15 @@ public class MainActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
 
-        mSensorService = new SensorService(getCtx());
-        mServiceIntent = new Intent(getCtx(), mSensorService.getClass());
+        // Service run background
+        /*mSensorService = new SensorService(getCtx());
+        mServiceIntent = new Intent(getCtx(), mSensorService.getClass());*/
 
         startService(new Intent(getCtx(), USSDService.class));
-
-        MySQLAccess dao = new MySQLAccess();
-        try {
-            dao.readDataBase();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
         if (Constant.first_login) {
             checkBalance();
         }
-
-
 
         updateDeviceName();
         updateBalance();
@@ -120,12 +112,12 @@ public class MainActivity extends AppCompatActivity {
                 assert device != null;
                 txtv_status.setText(device.getRunning() ? "Đang chạy" : "Dừng");
 
-                Log.e(TAG, "onDataChange: " + device.getStatus());
                 if (!Constant.first_login) {
                     if (device.getListener() != null) {
                         checkStatusListener(device);
                     } else if (device.getStatus().equals("ready")) {
                         if (device.getRunning()) {
+                            Li
                             mDatabase.child("users").child(deviceName).child("status").setValue("busy");
                             if (Constant.count_fails < 4) {
                                 checkStatus();
