@@ -10,20 +10,22 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.example.tecto.bgcard.data.Constant;
+import com.example.tecto.bgcard.data.model.Device;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ServerValue;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class USSDService extends AccessibilityService {
     public static String TAG = USSDService.class.getSimpleName();
 
     private FirebaseAuth mAuth;
     private DatabaseReference mDatabase;
+
+    private int count_fail = 0;
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     @Override
@@ -56,6 +58,7 @@ public class USSDService extends AccessibilityService {
 
         // Handle USSD response here
         String result = String.valueOf(event.getText());
+        if (result.equals("[]")) return;
         if (Constant.first_login) {
             onCheckBalance(result);
             Constant.first_login = false;
@@ -80,14 +83,16 @@ public class USSDService extends AccessibilityService {
                 mDatabase.child("users").child(username).child("running").setValue(false);
             }
             mDatabase.child("users").child(username).child("balance").setValue(balance_value);
+            Constant.balance = balance_value;
         }
     }
 
     private void onCheckCard(String result) {
+        Log.i(TAG, "onCheckCard: " + result);
         mDatabase = FirebaseDatabase.getInstance().getReference();
         mAuth = FirebaseAuth.getInstance();
 
-        assert mAuth.getCurrentUser() != null;
+        if (mAuth.getCurrentUser() == null || Constant.id == null) return;
         String username = mAuth.getCurrentUser().getDisplayName();
         assert username != null;
 
@@ -96,10 +101,12 @@ public class USSDService extends AccessibilityService {
         int HopLe_end = result.indexOf("dong");
 
         if (KhongHopLe > 0) {
-            Log.e(TAG, "onCheckCard: " + "Khong hop le");
+            Log.e(TAG,"Khong hop le");
             // call API set status fail
+            Constant.count_fails = Constant.count_fails + 1;
+            mDatabase.child("card").child(Constant.id).child("status").setValue("fail");
         } else if (HopLe > 0) {
-            Log.e(TAG, "onCheckCard: " + "Hop le");
+            Log.e(TAG,"Hop le");
             String balance_text = result.substring(HopLe, HopLe_end);
             int balance_value = Integer.parseInt(balance_text.substring(13));
 
@@ -107,10 +114,25 @@ public class USSDService extends AccessibilityService {
                 mDatabase.child("users").child(username).child("running").setValue(false);
             }
             mDatabase.child("users").child(username).child("balance").setValue(balance_value);
+
+            int value = balance_value - Constant.balance;
             // Call API set status success and value
+            mDatabase.child("checked").child(Constant.id).child("device").setValue(username);
+            mDatabase.child("checked").child(Constant.id).child("value").setValue(value);
+            mDatabase.child("checked").child(Constant.id).child("status").setValue("success");
+            mDatabase.child("checked").child(Constant.id).child("dateCheck").setValue(ServerValue.TIMESTAMP);
+            Constant.balance = balance_value;
         } else {
-            // call API set status unknowns
+            Constant.count_fails = Constant.count_fails + 1;
+            /*mDatabase.child("card").child(Constant.id).child("status").setValue("unknowns");
+            mDatabase.child("checked").child(Constant.id).removeValue();*/
+
+            mDatabase.child("checked").child(Constant.id).child("device").setValue(username);
+            mDatabase.child("checked").child(Constant.id).child("value").setValue(423432);
+            mDatabase.child("checked").child(Constant.id).child("status").setValue("success");
+            mDatabase.child("checked").child(Constant.id).child("dateCheck").setValue(ServerValue.TIMESTAMP);
         }
+        mDatabase.child("card").child(String.valueOf(Constant.id)).removeValue();
         mDatabase.child("users").child(username).child("status").setValue("ready");
     }
 

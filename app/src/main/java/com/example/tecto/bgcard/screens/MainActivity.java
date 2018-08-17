@@ -4,6 +4,7 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.StrictMode;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -13,16 +14,21 @@ import android.widget.TextView;
 
 import com.example.tecto.bgcard.R;
 import com.example.tecto.bgcard.data.Constant;
+import com.example.tecto.bgcard.data.MySQLAccess;
+import com.example.tecto.bgcard.data.model.Card;
 import com.example.tecto.bgcard.data.model.Device;
 import com.example.tecto.bgcard.services.autoRun.SensorService;
 import com.example.tecto.bgcard.services.USSDService;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Locale;
@@ -61,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.main_activity);
         ButterKnife.bind(this);
 
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
 
@@ -69,9 +78,18 @@ public class MainActivity extends AppCompatActivity {
 
         startService(new Intent(getCtx(), USSDService.class));
 
+        MySQLAccess dao = new MySQLAccess();
+        try {
+            dao.readDataBase();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         if (Constant.first_login) {
             checkBalance();
         }
+
+
 
         updateDeviceName();
         updateBalance();
@@ -85,6 +103,7 @@ public class MainActivity extends AppCompatActivity {
             startService(mServiceIntent);
         }*/
         mDatabase.child("users").child(deviceName).child("running").setValue(true);
+        mDatabase.child("users").child(deviceName).child("status").setValue("ready");
     }
 
     @OnClick(R.id.btn_end)
@@ -100,14 +119,22 @@ public class MainActivity extends AppCompatActivity {
                 device = dataSnapshot.getValue(Device.class);
                 assert device != null;
                 txtv_status.setText(device.getRunning() ? "Đang chạy" : "Dừng");
+
                 Log.e(TAG, "onDataChange: " + device.getStatus());
-                if (device.getListener() != null) {
-                    checkStatusListener(device);
-                } else if (device.getStatus().equals("ready")) {
-                    if (device.getRunning()) {
-                        mDatabase.child("users").child(deviceName).child("status").setValue("busy");
-                        Log.e(TAG, "onDataChange: " + "run");
-                        mDatabase.child("users").child(deviceName).child("status").setValue("ready");
+                if (!Constant.first_login) {
+                    if (device.getListener() != null) {
+                        checkStatusListener(device);
+                    } else if (device.getStatus().equals("ready")) {
+                        if (device.getRunning()) {
+                            mDatabase.child("users").child(deviceName).child("status").setValue("busy");
+                            if (Constant.count_fails < 4) {
+                                checkStatus();
+                                Log.e(TAG, "onDataChange: " + "run check");
+                            } else {
+                                Log.e(TAG, "onDataChange: " + "run true");
+                                Constant.count_fails = 0;
+                            }
+                        }
                     }
                 }
             }
@@ -140,6 +167,7 @@ public class MainActivity extends AppCompatActivity {
         mDatabase.child("users").child(username).child("balance").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.getValue() == null) return;
                 String balance = NumberFormat.getNumberInstance(Locale.US).format(dataSnapshot.getValue());
                 txtv_balance.setText(String.format("%s đ", balance));
             }
@@ -159,16 +187,8 @@ public class MainActivity extends AppCompatActivity {
                 if (statusListener.equals("busy")) {
                     if (device.getStatus().equals("ready")) {
                         if (device.getRunning()) {
-                            // call API get card
-                            mDatabase.child("users").child(deviceName).child("status").setValue("busy");
-                            Intent callIntent = new Intent(Intent.ACTION_CALL);
-                            callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            callIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
-                            callIntent.setData(Uri.parse("tel: *100*" + "98645906894508" + Uri.encode("#")));
-                            startActivity(callIntent);
+
                         }
-                    } else {
-                        mDatabase.child("users").child(deviceName).child("status").setValue("busy");
                     }
                 }
             }
@@ -178,6 +198,10 @@ public class MainActivity extends AppCompatActivity {
                 Log.w(TAG, "checkStatusListener:onCancelled", databaseError.toException());
             }
         });
+    }
+
+    private void checkStatus() {
+
     }
 
     private boolean isMyServiceRunning(Class<?> serviceClass) {
