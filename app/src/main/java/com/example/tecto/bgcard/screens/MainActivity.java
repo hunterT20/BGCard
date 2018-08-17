@@ -117,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
                         checkStatusListener(device);
                     } else if (device.getStatus().equals("ready")) {
                         if (device.getRunning()) {
-                            Li
+
                             mDatabase.child("users").child(deviceName).child("status").setValue("busy");
                             if (Constant.count_fails < 4) {
                                 checkStatus();
