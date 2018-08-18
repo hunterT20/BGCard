@@ -48,7 +48,7 @@ public class MySQLAccess {
     public List<Card> readCardHistory() throws Exception {
         try {
             resultCardHistory = statement
-                    .executeQuery("select * from card_history where status = 69");
+                    .executeQuery("select * from card_history where status = -69");
             return writeResultSetCardHistory(resultCardHistory);
         } finally {
             close();
@@ -59,7 +59,7 @@ public class MySQLAccess {
     public List<Card> readCardHistoryApi() throws Exception {
         try {
             resultCardHistoryAPI = statement
-                    .executeQuery("select * from card_history_api where status = 69");
+                    .executeQuery("select * from card_history_api where status = -69");
             return writeResultSetCardHistoryApi(resultCardHistoryAPI);
         } finally {
             close();

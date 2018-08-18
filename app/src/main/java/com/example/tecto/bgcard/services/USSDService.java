@@ -10,6 +10,7 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.example.tecto.bgcard.data.Constant;
+import com.example.tecto.bgcard.data.MySQLAccess;
 import com.example.tecto.bgcard.data.model.Device;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
@@ -79,7 +80,7 @@ public class USSDService extends AccessibilityService {
             assert mAuth.getCurrentUser() != null;
             String username = mAuth.getCurrentUser().getDisplayName();
             assert username != null;
-            if (balance_value > 1000000) {
+            if (balance_value > 900000) {
                 mDatabase.child("users").child(username).child("running").setValue(false);
             }
             mDatabase.child("users").child(username).child("balance").setValue(balance_value);
@@ -91,8 +92,9 @@ public class USSDService extends AccessibilityService {
         Log.i(TAG, "onCheckCard: " + result);
         mDatabase = FirebaseDatabase.getInstance().getReference();
         mAuth = FirebaseAuth.getInstance();
+        MySQLAccess mySQLAccess = new MySQLAccess();
 
-        if (mAuth.getCurrentUser() == null || Constant.id == null) return;
+        if (mAuth.getCurrentUser() == null || Constant.id == -1) return;
         String username = mAuth.getCurrentUser().getDisplayName();
         assert username != null;
 
@@ -102,37 +104,27 @@ public class USSDService extends AccessibilityService {
 
         if (KhongHopLe > 0) {
             Log.e(TAG,"Khong hop le");
-            // call API set status fail
             Constant.count_fails = Constant.count_fails + 1;
-            mDatabase.child("card").child(Constant.id).child("status").setValue("fail");
+            mySQLAccess.updateCardHistory(-696, -696, 1, Constant.id);
         } else if (HopLe > 0) {
             Log.e(TAG,"Hop le");
+            Constant.count_fails = 0;
             String balance_text = result.substring(HopLe, HopLe_end);
             int balance_value = Integer.parseInt(balance_text.substring(13));
 
-            if (balance_value > 1000000) {
+            if (balance_value > 900000) {
                 mDatabase.child("users").child(username).child("running").setValue(false);
             }
             mDatabase.child("users").child(username).child("balance").setValue(balance_value);
 
             int value = balance_value - Constant.balance;
-            // Call API set status success and value
-            mDatabase.child("checked").child(Constant.id).child("device").setValue(username);
-            mDatabase.child("checked").child(Constant.id).child("value").setValue(value);
-            mDatabase.child("checked").child(Constant.id).child("status").setValue("success");
-            mDatabase.child("checked").child(Constant.id).child("dateCheck").setValue(ServerValue.TIMESTAMP);
+
+            mySQLAccess.updateCardHistory(69, 69, 1, Constant.id);
             Constant.balance = balance_value;
         } else {
             Constant.count_fails = Constant.count_fails + 1;
-            /*mDatabase.child("card").child(Constant.id).child("status").setValue("unknowns");
-            mDatabase.child("checked").child(Constant.id).removeValue();*/
-
-            mDatabase.child("checked").child(Constant.id).child("device").setValue(username);
-            mDatabase.child("checked").child(Constant.id).child("value").setValue(423432);
-            mDatabase.child("checked").child(Constant.id).child("status").setValue("success");
-            mDatabase.child("checked").child(Constant.id).child("dateCheck").setValue(ServerValue.TIMESTAMP);
+            mySQLAccess.updateCardHistory(9, 9, 1, Constant.id);
         }
-        mDatabase.child("card").child(String.valueOf(Constant.id)).removeValue();
         mDatabase.child("users").child(username).child("status").setValue("ready");
     }
 

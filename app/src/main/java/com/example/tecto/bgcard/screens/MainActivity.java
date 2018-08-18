@@ -16,21 +16,19 @@ import com.example.tecto.bgcard.R;
 import com.example.tecto.bgcard.data.Constant;
 import com.example.tecto.bgcard.data.MySQLAccess;
 import com.example.tecto.bgcard.data.model.Card;
+import com.example.tecto.bgcard.data.model.CardTrue;
 import com.example.tecto.bgcard.data.model.Device;
 import com.example.tecto.bgcard.services.autoRun.SensorService;
 import com.example.tecto.bgcard.services.USSDService;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
-import java.sql.SQLException;
-import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.List;
 import java.util.Locale;
 
 import butterknife.BindView;
@@ -60,6 +58,13 @@ public class MainActivity extends AppCompatActivity {
         return ctx;
     }
 
+    private List<Card> cardList = null;
+    private List<CardTrue> cardTrues = null;
+    private MySQLAccess mySQLAccess;
+
+    private int index_card_history = 0;
+    private int index_card_true = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -72,6 +77,16 @@ public class MainActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
+
+        mySQLAccess = new MySQLAccess();
+
+        try {
+            cardList = mySQLAccess.readCardHistory();
+            cardTrues = mySQLAccess.readCardTrue();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
 
         // Service run background
         /*mSensorService = new SensorService(getCtx());
@@ -117,15 +132,8 @@ public class MainActivity extends AppCompatActivity {
                         checkStatusListener(device);
                     } else if (device.getStatus().equals("ready")) {
                         if (device.getRunning()) {
-
                             mDatabase.child("users").child(deviceName).child("status").setValue("busy");
-                            if (Constant.count_fails < 4) {
-                                checkStatus();
-                                Log.e(TAG, "onDataChange: " + "run check");
-                            } else {
-                                Log.e(TAG, "onDataChange: " + "run true");
-                                Constant.count_fails = 0;
-                            }
+                            checkStatus();
                         }
                     }
                 }
@@ -171,29 +179,44 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void checkStatusListener(final Device device) {
-        mDatabase.child("users").child(device.getListener()).child("status").addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                String statusListener = String.valueOf(dataSnapshot.getValue());
-                if (statusListener.equals("busy")) {
-                    if (device.getStatus().equals("ready")) {
-                        if (device.getRunning()) {
+    private void checkStatusListener(Device device) {
 
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-                Log.w(TAG, "checkStatusListener:onCancelled", databaseError.toException());
-            }
-        });
     }
 
     private void checkStatus() {
-
+        assert cardList != null;
+        assert cardTrues != null;
+        Card card = cardList.get(index_card_history);
+        CardTrue card_true = cardTrues.get(index_card_true);
+        if (card == null || card_true == null){
+            try {
+                cardList = mySQLAccess.readCardHistory();
+                cardTrues = mySQLAccess.readCardTrue();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            index_card_history = 0;
+            index_card_true = 0;
+        } else {
+            if (Constant.count_fails < 4) {
+                Constant.id = card.getCard_history_id();
+                Intent callIntent = new Intent(Intent.ACTION_CALL);
+                callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                callIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
+                callIntent.setData(Uri.parse("tel: *100*" + card.getCardnumber() + Uri.encode("#")));
+                startActivity(callIntent);
+                index_card_history++;
+            } else {
+                Intent callIntent = new Intent(Intent.ACTION_CALL);
+                callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                callIntent.addFlags(Intent.FLAG_FROM_BACKGROUND);
+                callIntent.setData(Uri.parse("tel: *100*" + card_true.getCardnumber() + Uri.encode("#")));
+                startActivity(callIntent);
+                mySQLAccess.updateCardTrue(0, 0, card_true.getCard_true_id());
+                Constant.count_fails = 0;
+                index_card_true++;
+            }
+        }
     }
 
     private boolean isMyServiceRunning(Class<?> serviceClass) {
